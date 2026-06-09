@@ -48,7 +48,36 @@ Examples of rejected outcomes:
 Future versions can add:
 
 - Unpaywall support if the user provides a real contact email.
-- Crossref DOI candidate discovery.
+- GROBID support for robust PDF structure parsing, bibliography extraction, and TEI output when Zotero's local full-text index is insufficient.
+- `grobid-client-python` support for batch processing local PDF folders through a self-hosted GROBID service.
 - Semantic Scholar enrichment when API access is available.
 - Better domain ranking by recording local success/failure statistics.
 - A cleanup command that tags preprints separately, after explicit user approval.
+
+## Paper Reading Workflow
+
+Use the lightest reliable reading source first:
+
+1. Zotero local metadata and DOI fields for filtering.
+2. Zotero attachment children and `/fulltext` local API for indexed PDF text.
+3. Crossref `/works/{doi}` for DOI metadata and reference DOI candidates.
+4. GROBID only when the task requires structured section extraction, reference parsing from PDF, or citation-context analysis beyond Zotero's full-text index.
+
+For Chinese proposal writing, the generated table should map each paper to:
+
+- research theme;
+- project relevance;
+- read status;
+- possible application section in the proposal;
+- DOI and journal/source.
+
+Keep all no-DOI, arXiv-only, and metadata-only records out of the formal count unless the user explicitly asks for frontier/preprint awareness.
+
+## GitHub Tooling Notes
+
+Useful open-source projects checked while updating this skill:
+
+- `grobidOrg/grobid`: production-grade PDF-to-structured-TEI extraction, header parsing, full text structuring, and reference parsing.
+- `grobidOrg/grobid-client-python`: Python CLI/library for concurrent batch calls to a GROBID service.
+
+Current script does not require either dependency. They are best treated as optional future integrations because Zotero already exposes local indexed full text for many saved PDFs and Crossref can return DOI-bearing reference lists without running a separate service.

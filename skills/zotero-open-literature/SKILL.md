@@ -1,6 +1,6 @@
 ---
 name: zotero-open-literature
-description: Use when Codex needs to build or extend a Zotero literature collection with legally downloadable open-access PDFs, especially for formal DOI-bearing journal or conference papers; trigger on Zotero literature import, OpenAlex paper search, DOI/PDF batch download, "100 papers", "download papers into Zotero", filtering out arXiv/preprints, or summarizing Zotero titles by research theme.
+description: Use when Codex needs to build, extend, read, or summarize a Zotero literature collection with legally downloadable open-access PDFs, especially for formal DOI-bearing journal or conference papers; trigger on Zotero literature import, OpenAlex paper search, DOI/PDF batch download, "100 papers", "download papers into Zotero", filtering out arXiv/preprints, extracting DOI references, literature review tables, or drafting research-status summaries from Zotero papers.
 ---
 
 # Zotero Open Literature
@@ -39,6 +39,22 @@ python scripts/zotero_open_literature.py import-openalex \
 
 ```bash
 python scripts/zotero_open_literature.py summarize \
+  --work-dir ./zotero-open-literature-work
+```
+
+6. Read the Zotero collection and produce a proposal-ready literature table:
+
+```bash
+python scripts/zotero_open_literature.py review-collection \
+  --project-title "熔融石英齿形结构超快激光辅助化学刻蚀切割释放工艺研究" \
+  --work-dir ./zotero-open-literature-work
+```
+
+7. Mine DOI-only candidate papers from references exposed through Crossref:
+
+```bash
+python scripts/zotero_open_literature.py reference-doi-candidates \
+  --limit 40 \
   --work-dir ./zotero-open-literature-work
 ```
 
@@ -101,6 +117,27 @@ Run `summarize` after import. It writes:
 - `summary.json`
 
 Use these outputs to brainstorm project titles, literature clusters, and application-writing directions.
+
+### 6. Read and Organize for Proposal Writing
+
+Run `review-collection` when the user needs domestic/foreign research status, a literature table, or paper-reading notes for a proposal. The command:
+
+- keeps DOI-bearing non-preprint papers by default;
+- checks Zotero PDF attachments and reads Zotero's local full-text index when available;
+- labels whether each item was read from indexed full text, abstract only, or metadata/PDF status;
+- groups papers by proposal-relevant themes such as SLE/FLICE chemical etching, Bessel/cutting, fused-silica modification mechanisms, surface quality, and 3D glass microstructures;
+- writes `review/literature_review_table.csv`, `review/literature_review_table.md`, and `review/research_status_draft.md`.
+
+For formal writing, treat the generated `abstract_digest` and `conclusion_digest` as navigation notes. Open the PDF before final citation phrasing.
+
+### 7. Mine Reference DOI Candidates
+
+Run `reference-doi-candidates` when the user asks to add more papers from existing papers' references. The command queries Crossref for each existing DOI and extracts referenced DOIs that are not already in the collection. It writes:
+
+- `reference-candidates/reference_doi_candidates.csv`
+- `reference-candidates/reference_doi_candidates.md`
+
+Do not auto-import every candidate. First keep only relevant DOI-bearing papers, then download through legal OA routes using `import-openalex`, Zotero Connector, publisher OA pages, or institutional repositories.
 
 ## Resource Files
 
