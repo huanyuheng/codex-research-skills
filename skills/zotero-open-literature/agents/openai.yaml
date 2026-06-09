@@ -1,0 +1,7 @@
+interface:
+  display_name: "Zotero Open Literature"
+  short_description: "Import formal OA PDFs into Zotero"
+  default_prompt: "Use $zotero-open-literature to build a formal Zotero literature set with legal open-access PDFs and summarize the titles by theme."
+
+policy:
+  allow_implicit_invocation: true
