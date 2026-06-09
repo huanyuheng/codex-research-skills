@@ -58,6 +58,14 @@ python scripts/zotero_open_literature.py reference-doi-candidates \
   --work-dir ./zotero-open-literature-work
 ```
 
+8. Export an evidence packet before writing human understanding summaries:
+
+```bash
+python scripts/zotero_open_literature.py evidence-packet \
+  --limit 35 \
+  --work-dir ./zotero-open-literature-work
+```
+
 ## Workflow
 
 ### 1. Confirm Zotero Target
@@ -129,6 +137,17 @@ Run `review-collection` when the user needs domestic/foreign research status, a 
 - writes `review/literature_review_table.csv`, `review/literature_review_table.md`, and `review/research_status_draft.md`.
 
 For formal writing, treat the generated `abstract_digest` and `conclusion_digest` as navigation notes. Open the PDF before final citation phrasing.
+
+When the user asks for "理解概括" rather than a metadata table, first run `evidence-packet`, then write a human synthesis table with columns like:
+
+- paper and DOI;
+- problem addressed;
+- method/material;
+- key conclusion in plain Chinese;
+- direct use for the user's project/proposal;
+- priority.
+
+Do not present raw abstract snippets as the final understanding summary.
 
 ### 7. Mine Reference DOI Candidates
 

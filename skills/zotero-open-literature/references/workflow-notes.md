@@ -71,6 +71,8 @@ For Chinese proposal writing, the generated table should map each paper to:
 - possible application section in the proposal;
 - DOI and journal/source.
 
+If the user asks for a true understanding summary, run `evidence-packet` and then synthesize manually. The evidence packet is not the answer; it is the source material for a readable table that explains what each paper solved, how it solved it, what it concluded, and why it matters to the user's project.
+
 Keep all no-DOI, arXiv-only, and metadata-only records out of the formal count unless the user explicitly asks for frontier/preprint awareness.
 
 ## GitHub Tooling Notes
@@ -79,5 +81,7 @@ Useful open-source projects checked while updating this skill:
 
 - `grobidOrg/grobid`: production-grade PDF-to-structured-TEI extraction, header parsing, full text structuring, and reference parsing.
 - `grobidOrg/grobid-client-python`: Python CLI/library for concurrent batch calls to a GROBID service.
+- `unpywall/unpywall`: legal OA PDF lookup/download through Unpaywall, useful when the user provides a real contact email.
+- `ourresearch/openalex-official`: official OpenAlex CLI for metadata/PDF/TEI downloads by filter or DOI when an OpenAlex API key is available.
 
 Current script does not require either dependency. They are best treated as optional future integrations because Zotero already exposes local indexed full text for many saved PDFs and Crossref can return DOI-bearing reference lists without running a separate service.

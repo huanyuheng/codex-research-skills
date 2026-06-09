@@ -1255,6 +1255,75 @@ def cmd_reference_doi_candidates(args) -> None:
     log(json.dumps({"sources_checked": len(sources), "candidates": len(enriched), "csv": str(csv_path), "markdown": str(md_path)}, ensure_ascii=False, indent=2))
 
 
+def cmd_evidence_packet(args) -> None:
+    target = resolve_target(args)
+    items, _, _ = existing_items(target["library_id"], target["collection_key"])
+    rows = []
+    for item in items:
+        data = item.get("data", {})
+        if not args.include_arxiv and is_arxivish(data):
+            continue
+        if not args.include_no_doi and not normalize_doi(data.get("DOI")):
+            continue
+        fulltext = ""
+        indexed_chars = 0
+        attachment_count = 0
+        if not args.no_fulltext:
+            fulltext, indexed_chars, attachment_count = item_fulltext(
+                target["library_id"],
+                item,
+                max_chars=max(args.fulltext_chars, 2000),
+            )
+        abstract = abstract_or_fulltext(data, fulltext)
+        conclusion = conclusion_from_fulltext(fulltext)
+        method_or_intro = first_section(
+            fulltext,
+            ["materials and methods", "experimental", "experiment", "methods"],
+            ["results", "discussion", "conclusion"],
+            limit=900,
+        ) or first_section(
+            fulltext,
+            ["introduction"],
+            ["materials", "method", "experimental", "results"],
+            limit=700,
+        )
+        evidence_text = f"{data.get('title','')} {abstract} {conclusion} {fulltext[:3000]}"
+        theme, project_note = review_theme(evidence_text)
+        score = project_score(data, evidence_text)
+        if score < args.min_score:
+            continue
+        rows.append(
+            {
+                "year": parse_year(data.get("date")),
+                "title": clean_text(data.get("title")),
+                "authors": creators_text(data),
+                "journal": clean_text(data.get("publicationTitle")),
+                "doi": normalize_doi(data.get("DOI")),
+                "theme": theme,
+                "score": score,
+                "read_status": "全文已索引" if indexed_chars >= 2000 else ("有PDF但未索引全文" if attachment_count else "无PDF/未找到附件"),
+                "keywords": found_keywords(evidence_text),
+                "parameters": parameter_terms(evidence_text),
+                "abstract": short_text(abstract, args.snippet_chars),
+                "method_or_intro": short_text(method_or_intro, args.snippet_chars),
+                "conclusion": short_text(conclusion, args.snippet_chars),
+                "project_note": project_note,
+                "indexed_chars": indexed_chars,
+                "attachment_count": attachment_count,
+                "key": data.get("key", ""),
+                "url": data.get("url", ""),
+            }
+        )
+    rows.sort(key=lambda r: (r["score"], r["year"], r["title"]), reverse=True)
+    if args.limit:
+        rows = rows[: args.limit]
+    out_dir = Path(args.work_dir) / "review"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    out_path = out_dir / args.out_name
+    out_path.write_text(json.dumps(rows, ensure_ascii=False, indent=2), encoding="utf-8")
+    log(json.dumps({"rows": len(rows), "output": str(out_path)}, ensure_ascii=False, indent=2))
+
+
 def add_target_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--library-id", help="Zotero local library id. Defaults to selected collection library.")
     parser.add_argument("--collection-key", help="Zotero collection key. Defaults to selected collection name lookup.")
@@ -1318,6 +1387,19 @@ def main(argv: list[str] | None = None) -> int:
     refs.add_argument("--csv-name", default="reference_doi_candidates.csv")
     refs.add_argument("--md-name", default="reference_doi_candidates.md")
     refs.set_defaults(func=cmd_reference_doi_candidates)
+
+    evidence = sub.add_parser("evidence-packet")
+    add_target_args(evidence)
+    evidence.add_argument("--include-arxiv", action="store_true")
+    evidence.add_argument("--include-no-doi", action="store_true")
+    evidence.add_argument("--no-fulltext", action="store_true", help="Do not query Zotero attachment fulltext indexes.")
+    evidence.add_argument("--fulltext-chars", type=int, default=22000)
+    evidence.add_argument("--snippet-chars", type=int, default=900)
+    evidence.add_argument("--min-score", type=int, default=0)
+    evidence.add_argument("--limit", type=int, default=35)
+    evidence.add_argument("--work-dir", default="zotero-open-literature-work")
+    evidence.add_argument("--out-name", default="evidence_packet.json")
+    evidence.set_defaults(func=cmd_evidence_packet)
 
     args = parser.parse_args(argv)
     try:
