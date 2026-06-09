@@ -11,7 +11,7 @@ Build a Zotero collection of formal, citable papers with real PDF attachments. T
 
 - Use only legal open-access routes: publisher OA PDFs, institutional repositories, PMC, arXiv only when the user explicitly accepts preprints, and other public repositories.
 - Do not use Sci-Hub, shadow libraries, paywall bypasses, or credentials that the user did not explicitly provide.
-- Count "formal core literature" as non-arXiv items with DOI or clear journal/conference metadata and a PDF attachment.
+- Count "formal core literature" as non-arXiv items with DOI and a PDF attachment.
 - Keep preprints separate from the formal count. They may be useful for frontier awareness, but do not use them to satisfy "formal/citable paper count" unless the user approves.
 - Never delete existing Zotero items unless the user explicitly asks. Prefer tags or exported reports for cleanup.
 
@@ -61,6 +61,12 @@ python scripts/zotero_open_literature.py doctor \
   --target-tree-id C77
 ```
 
+You may also set `ZOTERO_USER_ID` when Zotero reports an internal library id but the local API asks for the logged-in user id:
+
+```bash
+ZOTERO_USER_ID=17442387 python scripts/zotero_open_literature.py doctor
+```
+
 ### 2. Build Candidate Set
 
 Prefer OpenAlex for broad discovery because it returns DOI, source metadata, citation counts, abstracts, and OA PDF locations in one JSON response. Use focused queries and several pages rather than one huge generic search.
@@ -84,7 +90,7 @@ If a publisher returns an HTML landing page, the script rejects it and tries the
 
 ### 4. Separate Formal Papers and Preprints
 
-By default `import-openalex` excludes `arxiv.org` and `content.openalex.org` PDF URLs. It also skips records whose source looks like arXiv/preprint. If the user explicitly wants preprints, run a separate pass into another collection or tag them separately.
+By default `import-openalex` excludes `arxiv.org` and `content.openalex.org` PDF URLs. It also skips records whose source looks like arXiv/preprint and skips records without DOI. If the user explicitly wants preprints or no-DOI records, run a separate pass into another collection or tag them separately.
 
 ### 5. Summarize
 

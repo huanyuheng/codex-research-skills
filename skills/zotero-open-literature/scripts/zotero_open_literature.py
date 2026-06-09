@@ -23,6 +23,13 @@ from collections import Counter
 from pathlib import Path
 
 
+try:
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+except Exception:
+    pass
+
+
 CONNECTOR = "http://127.0.0.1:23119/connector"
 OPENALEX = "https://api.openalex.org/works"
 
@@ -182,9 +189,19 @@ def discover_collection_key(library_id: str, selected: dict) -> str | None:
 
 def resolve_target(args) -> dict:
     selected = selected_collection()
-    library_id = str(args.library_id or selected.get("libraryID") or selected.get("libraryId") or "")
+    library_id = str(
+        args.library_id
+        or os.environ.get("ZOTERO_USER_ID")
+        or selected.get("libraryID")
+        or selected.get("libraryId")
+        or ""
+    )
+    if not args.library_id and not os.environ.get("ZOTERO_USER_ID") and library_id == "1":
+        # Zotero 9 may report the local internal library id here. The local API
+        # accepts /users/0 for the logged-in user, avoiding a misleading 400.
+        library_id = "0"
     if not library_id:
-        raise RuntimeError("Could not determine Zotero library id; pass --library-id.")
+        raise RuntimeError("Could not determine Zotero library id; pass --library-id or set ZOTERO_USER_ID.")
     collection_key = args.collection_key or discover_collection_key(library_id, selected)
     if not collection_key:
         raise RuntimeError("Could not determine collection key; pass --collection-key.")
@@ -253,7 +270,7 @@ def is_arxivish(data_or_work: dict) -> bool:
 
 
 def formal_count(items: list[dict]) -> int:
-    return sum(1 for item in items if not is_arxivish(item.get("data", {})))
+    return sum(1 for item in items if normalize_doi(item.get("data", {}).get("DOI")) and not is_arxivish(item.get("data", {})))
 
 
 def relevance_score(work: dict) -> int:
@@ -402,7 +419,11 @@ def fetch_candidates(queries: list[str], pages: int, per_page: int, allow_arxiv:
             }
             url = OPENALEX + "?" + urllib.parse.urlencode(params)
             log(f"OpenAlex: {query} page {page}")
-            data = json.loads(curl_text(url, timeout=70))
+            try:
+                data = json.loads(curl_text(url, timeout=70))
+            except Exception as exc:
+                log(f"  OpenAlex failed: {exc}")
+                continue
             for work in data.get("results", []):
                 key = normalize_doi(work.get("doi")) or normalize_title(work.get("title"))
                 if not key:
@@ -520,6 +541,8 @@ def cmd_import_openalex(args) -> None:
         if not args.allow_arxiv and is_arxivish(work):
             continue
         doi = normalize_doi(work.get("doi"))
+        if not doi and not args.allow_no_doi:
+            continue
         title = work.get("title") or ""
         title_norm = normalize_title(title)
         if doi and doi in existing_dois:
@@ -605,6 +628,8 @@ def cmd_summarize(args) -> None:
         data = item.get("data", {})
         if not args.include_arxiv and is_arxivish(data):
             continue
+        if not args.include_no_doi and not normalize_doi(data.get("DOI")):
+            continue
         title = data.get("title", "")
         rows.append(
             {
@@ -660,6 +685,7 @@ def main(argv: list[str] | None = None) -> int:
     imp.add_argument("--pages", type=int, default=4)
     imp.add_argument("--per-page", type=int, default=50)
     imp.add_argument("--allow-arxiv", action="store_true", help="Allow arXiv PDF URLs and arXiv-like records.")
+    imp.add_argument("--allow-no-doi", action="store_true", help="Allow records without DOI. Disabled by default.")
     imp.add_argument("--download-timeout", type=int, default=180)
     imp.add_argument("--delay", type=float, default=0.4)
     imp.add_argument("--work-dir", default="zotero-open-literature-work")
@@ -668,6 +694,7 @@ def main(argv: list[str] | None = None) -> int:
     summ = sub.add_parser("summarize")
     add_target_args(summ)
     summ.add_argument("--include-arxiv", action="store_true")
+    summ.add_argument("--include-no-doi", action="store_true")
     summ.add_argument("--work-dir", default="zotero-open-literature-work")
     summ.set_defaults(func=cmd_summarize)
 
